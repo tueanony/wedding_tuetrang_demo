@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- CSP cấp phép load hình ảnh từ Google Drive và VietQR API -->
   <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests; default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;">
   <title>Thông Tin Lễ Cưới | Nguyễn Tuệ & Diễm Trang</title>
 
@@ -38,7 +37,7 @@
       overflow-x: hidden;
     }
 
-    /* --- NÚT ĐIỀU KHIỂN NHẠC CỐ ĐỊNH CHỐNG VĂNG GIAO DIỆN --- */
+    /* --- NÚT ĐIỀU KHIỂN NHẠC CỐ ĐỊNH --- */
     .music-btn {
       position: fixed !important;
       bottom: 24px !important;
@@ -57,6 +56,7 @@
       color: var(--btn-brown) !important;
       font-size: 1.25rem !important;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
       transition: transform 0.2s ease, background 0.2s ease;
     }
     .music-btn:hover {
@@ -73,7 +73,7 @@
     /* --- TICKER LỜI CHÚC GÓC DƯỚI TRÁI --- */
     .floating-ticker-widget {
       position: fixed; bottom: 24px; left: 20px; z-index: 900;
-      max-width: 320px; width: 100%; background: rgba(61, 43, 31, 0.88);
+      max-width: 320px; width: 100%; background: rgba(61, 43, 31, 0.92);
       backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 12px; padding: 12px 14px; color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.25);
       transition: all 0.3s ease;
@@ -561,7 +561,7 @@
     }
     .btn-sub-action:hover { background: var(--btn-brown); color: #fff; }
 
-    /* --- FORM XÁC NHẬN THAM DỰ & LỜI CHÚC (CHUẨN ẢNH MẪU 2) --- */
+    /* --- FORM XÁC NHẬN THAM DỰ & LỜI CHÚC --- */
     .rsvp-form-card {
       background: #FFFDF9;
       border: 1px solid rgba(184, 115, 51, 0.25);
@@ -662,7 +662,7 @@
       cursor: not-allowed;
     }
 
-    /* --- KHUNG LỜI CHÚC CUỘN VÔ HẠN (CHUẨN ẢNH THAM KHẢO) --- */
+    /* --- KHUNG LỜI CHÚC CUỘN VÔ HẠN --- */
     .infinite-wishes-scroll-box {
       max-height: 480px;
       overflow-y: auto;
@@ -672,7 +672,6 @@
       gap: 14px;
       margin-top: 15px;
     }
-    /* Thanh cuộn mảnh mượt mà đồng bộ style */
     .infinite-wishes-scroll-box::-webkit-scrollbar {
       width: 6px;
     }
@@ -719,7 +718,7 @@
       line-height: 1.5;
     }
 
-    /* --- HỘP QUÀ MỪNG VỚI HIỆU ỨNG BAO LÌ XÌ TRÔI LƠ LỬNG --- */
+    /* --- HỘP QUÀ MỪNG VỚI BAO LÌ XÌ LƠ LỬNG --- */
     .gift-box-trigger {
       margin-top: 40px;
       text-align: center;
@@ -756,7 +755,7 @@
       100% { transform: translateY(0px) rotate(0deg); }
     }
 
-    /* --- MODAL HỘP QUÀ MỪNG VỚI MÃ QR CHUẨN GIAO DIỆN MẪU --- */
+    /* --- MODAL HỘP QUÀ MỪNG (QR CODE THANH TOÁN ONLINE) --- */
     .qr-modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(5px);
       z-index: 100001; display: flex; align-items: center; justify-content: center; padding: 15px;
@@ -877,14 +876,12 @@
 </head>
 <body>
 
+  <!-- AUDIO PLAYER: PHÁT NHẠC TỪ ROOT -->
   <audio id="audioPlayer" loop preload="auto">
     <source src="laanh.mp3" type="audio/mpeg" />
   </audio>
 
   <!-- NÚT BẬT/TẮT NHẠC CỐ ĐỊNH -->
-  <div class="music-btn" id="musicToggle" title="Bật/Tắt Nhạc Nền">♫</div>
-
-  <!-- NÚT BẬT/TẮT NHẠC (FIXED POSITION GÓC DƯỚI PHẢI) -->
   <div class="music-btn" id="musicToggle" title="Bật/Tắt Nhạc Nền">♫</div>
 
   <!-- TICKER LỜI CHÚC (GÓC DƯỚI TRÁI) -->
@@ -905,8 +902,6 @@
       <button class="btn-alert-ok" id="alertOkBtn">Đồng Ý</button>
     </div>
   </div>
-
-  <div class="music-btn" id="musicToggle" title="Nhạc Nền">♫</div>
 
   <!-- MÀN HÌNH CHÀO MỞ THIỆP -->
   <div id="gateScreen">
@@ -939,14 +934,14 @@
       <div class="parents-grid">
         <div class="parent-column">
           <div class="role-title">Ông Bà</div>
-          <div class="parent-names">Nguyễn Tiến Dũng<br />Võ Thị Phi Giao</div>
-          <div class="parent-location">Quy Nhơn</div>
+          <div class="parent-names">Nguyễn Văn Minh<br />Lê Thị Thanh</div>
+          <div class="parent-location">Đà Lạt, Lâm Đồng</div>
         </div>
         <div class="parents-divider"></div>
         <div class="parent-column">
           <div class="role-title">Ông Bà</div>
-          <div class="parent-names">Nguyễn Phương Tuấn<br />Võ Thị Thu Cúc</div>
-          <div class="parent-location">Tỉnh Đồng Tháp</div>
+          <div class="parent-names">Trần Quốc Bảo<br />Phạm Thị Hương</div>
+          <div class="parent-location">Thành phố Huế, Thừa Thiên Huế</div>
         </div>
       </div>
 
@@ -996,7 +991,7 @@
       </div>
     </div>
 
-    <!-- 3. THÔNG TIN TIỆC CƯỚI (COUNTDOWN TIMER & LỊCH THÁNG) -->
+    <!-- 3. THÔNG TIN TIỆC CƯỚI & COUNTDOWN -->
     <div class="reception-details-section">
       <div class="reception-header-title">THÔNG TIN TIỆC CƯỚI</div>
       <div class="reception-header-sub">TIỆC CƯỚI SẼ DIỄN RA VÀO LÚC:</div>
@@ -1012,7 +1007,7 @@
       <div class="year-display">2026</div>
       <div class="lunar-date">(TỨC NGÀY 04 THÁNG 11 NĂM BÍNH NGỌ)</div>
 
-      <!-- Khung Countdown Timer -->
+      <!-- Countdown Component -->
       <div class="countdown-container" id="countdownTimer">
         <div class="countdown-card">
           <div class="countdown-number" id="cdDays">00</div>
@@ -1032,7 +1027,6 @@
         </div>
       </div>
 
-      <!-- Timeline Khai Tiệc -->
       <div class="timeline-schedule-box">
         <div class="timeline-item-col">
           <small>ĐÓN KHÁCH</small>
@@ -1074,19 +1068,27 @@
       </div>
     </div>
 
-    <!-- 4. ĐỊA ĐIỂM, XÁC NHẬN THAM DỰ & LỜI CHÚC -->
+    <!-- 4. ĐỊA ĐIỂM HÔN LỄ & LỜI CHÚC -->
     <div class="extra-section">
       <div class="extra-section-title">ĐỊA ĐIỂM HÔN LỄ</div>
 
       <div class="event-box">
         <h3>LỄ THÀNH HÔN (TƯ GIA)</h3>
-        <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 6px; font-weight: 600;">Chợ Mỹ Xương, Mỹ Thọ, Đồng Tháp, Việt Nam</p>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 6px; font-weight: 600;">Số 88 Đường Nam Kỳ Khởi Nghĩa, Quận 1, TP. Hồ Chí Minh</p>
         <div class="map-frame-container">
-          <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d981.0309482582917!2d105.71771766951959!3d10.411741599357237!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x310a63313f04448d%3A0xebf9f14470c0cf87!2zQ2jhu6MgTeG7uSBYxrDGoW5n!5e0!3m2!1sen!2sus!4v1789756861388!5m2!1sen!2sus" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          <iframe src="https://www.google.com/maps?q=88+Nam+Kỳ+Khởi+Nghĩa,+Bến+Nghé,+Quận+1,+TP+Hồ+Chí+Minh&output=embed" loading="lazy"></iframe>
         </div>
-        <a href="https://maps.app.goo.gl/DeWTf856eBxqhm1cA" target="_blank" rel="noopener noreferrer" class="btn-sub-action">Mở Bản Đồ</a>
+        <a href="https://www.google.com/maps/search/?api=1&query=88+Đường+Nam+Kỳ+Khởi+Nghĩa,+Quận+1" target="_blank" class="btn-sub-action">Mở Bản Đồ</a>
       </div>
 
+      <div class="event-box">
+        <h3>TIỆC MỪNG HẠNH PHÚC</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 6px; font-weight: 600;">Trung Tâm Hội Nghị GEM Center, Số 8 Nguyễn Bỉnh Khiêm, Quận 1</p>
+        <div class="map-frame-container">
+          <iframe src="https://www.google.com/maps?q=GEM+Center,+8+Nguyễn+Bỉnh+Khiêm,+Đa+Kao,+Quận+1,+TP+Hồ+Chí+Minh&output=embed" loading="lazy"></iframe>
+        </div>
+        <a href="https://www.google.com/maps/search/?api=1&query=GEM+Center,+Số+8+Nguyễn+Bỉnh+Khiêm,+Quận+1" target="_blank" class="btn-sub-action">Mở Bản Đồ</a>
+      </div>
 
       <!-- FORM XÁC NHẬN THAM DỰ & GỬI LỜI CHÚC -->
       <div class="rsvp-form-card" id="rsvpCardSection">
@@ -1133,15 +1135,15 @@
         </form>
       </div>
 
-      <!-- DANH SÁCH LỜI CHÚC CUỘN VÔ HẠN (SCROLL BOX) -->
+      <!-- DANH SÁCH LỜI CHÚC CUỘN VÔ HẠN -->
       <div style="text-align: left; margin-top: 30px;">
         <h4 style="font-family: var(--font-serif); font-size: 1.4rem; color: var(--text-brown); font-weight: 700;">Lời Chúc Đã Nhận</h4>
         <div class="infinite-wishes-scroll-box" id="infiniteWishesBox">
-          <!-- Các item lời chúc sẽ được load tự động vào đây -->
+          <!-- Dữ liệu lời chúc render ở đây -->
         </div>
       </div>
 
-      <!-- HỘP QUÀ MỪNG (VỚI BAO LÌ XÌ TRÔI LƠ LỬNG) -->
+      <!-- HỘP QUÀ MỪNG (BAO LÌ XÌ LƠ LỬNG) -->
       <div class="gift-box-trigger" id="openGiftModal">
         <div class="gift-box-title">HỘP QUÀ MỪNG</div>
         <div class="floating-envelope-wrapper">
@@ -1163,7 +1165,7 @@
     </div>
   </div>
 
-  <!-- MODAL HỘP QUÀ MỪNG (QR CODE THANH TOÁN ONLINE) -->
+  <!-- MODAL HỘP QUÀ MỪNG (QR CODE) -->
   <div class="qr-modal-overlay" id="giftModal">
     <div class="qr-modal-card">
       <div class="qr-modal-header">
@@ -1218,58 +1220,53 @@
         customAlert.classList.add('active');
       }
 
-      // --- XỬ LÝ ÂM THANH TƯƠNG TÍCH DI ĐỘNG (MOBILE AUDIO UNLOCKER) ---
+      // --- LOGIC ÂM THANH TƯƠNG TÍCH IOS/MOBILE ---
       const audioPlayer = document.getElementById('audioPlayer');
       const musicToggle = document.getElementById('musicToggle');
       const btnOpen = document.getElementById('btnOpen');
       const gateScreen = document.getElementById('gateScreen');
 
-      let audioUnlocked = false;
-
-      function unlockAndPlayAudio() {
+      function playAudioSafe() {
         if (!audioPlayer) return;
-        
-        // Trên mobile, gọi lệnh play ngay trong một sự kiện chạm (User Gesture)
         audioPlayer.play()
           .then(() => {
-            audioUnlocked = true;
             if (musicToggle) musicToggle.classList.add('playing');
-            console.log("Audio unlocked and playing successfully.");
           })
           .catch((err) => {
-            console.warn("Mobile autoplay policy blocked play():", err);
+            console.warn("Trình duyệt chặn autoplay trên mobile:", err);
           });
       }
 
-      // Sự kiện bấm nút "Mở thiệp" (Đây là hành động chạm chính thức đầu tiên trên mobile)
-      if (btnOpen) {
-        btnOpen.addEventListener('click', () => {
-          if (gateScreen) gateScreen.classList.add('opened');
-          unlockAndPlayAudio();
-        });
+      function toggleAudio() {
+        if (!audioPlayer) return;
+        if (audioPlayer.paused) {
+          audioPlayer.play()
+            .then(() => { if (musicToggle) musicToggle.classList.add('playing'); })
+            .catch((e) => console.error("Lỗi phát audio:", e));
+        } else {
+          audioPlayer.pause();
+          if (musicToggle) musicToggle.classList.remove('playing');
+        }
       }
 
-      // Nút điều khiển thủ công góc dưới phải
       if (musicToggle) {
         musicToggle.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (!audioPlayer) return;
-          
-          if (audioPlayer.paused) {
-            audioPlayer.play()
-              .then(() => musicToggle.classList.add('playing'))
-              .catch(err => console.error("Không thể phát nhạc:", err));
-          } else {
-            audioPlayer.pause();
-            musicToggle.classList.remove('playing');
-          }
+          toggleAudio();
         });
       }
 
-      // Fallback chung cho mọi thiết bị di động: Chạm bất cứ đâu lần đầu tiên sẽ kích hoạt nhạc nếu chưa chạy
+      if (btnOpen) {
+        btnOpen.addEventListener('click', () => {
+          if (gateScreen) gateScreen.classList.add('opened');
+          playAudioSafe();
+        });
+      }
+
+      // Fallback cho màn hình cảm ứng di động
       window.addEventListener('touchstart', function handleFirstTouch() {
-        if (!audioUnlocked && audioPlayer && audioPlayer.paused) {
-          unlockAndPlayAudio();
+        if (audioPlayer && audioPlayer.paused) {
+          playAudioSafe();
         }
         window.removeEventListener('touchstart', handleFirstTouch);
       }, { once: true });
