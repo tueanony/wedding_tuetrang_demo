@@ -38,6 +38,38 @@
       overflow-x: hidden;
     }
 
+    /* --- NÚT ĐIỀU KHIỂN NHẠC CỐ ĐỊNH CHỐNG VĂNG GIAO DIỆN --- */
+    .music-btn {
+      position: fixed !important;
+      bottom: 24px !important;
+      right: 20px !important;
+      width: 48px !important;
+      height: 48px !important;
+      background: #FFFDF9 !important;
+      border: 1.5px solid var(--btn-brown) !important;
+      border-radius: 50% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      z-index: 999999 !important;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+      color: var(--btn-brown) !important;
+      font-size: 1.25rem !important;
+      user-select: none;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .music-btn:hover {
+      background: #FAF6F0 !important;
+      transform: scale(1.08);
+    }
+    .music-btn.playing {
+      animation: spinMusic 6s linear infinite !important;
+    }
+    @keyframes spinMusic {
+      100% { transform: rotate(360deg); }
+    }
+
     /* --- TICKER LỜI CHÚC GÓC DƯỚI TRÁI --- */
     .floating-ticker-widget {
       position: fixed; bottom: 24px; left: 20px; z-index: 900;
@@ -846,8 +878,14 @@
 <body>
 
   <audio id="audioPlayer" loop preload="auto">
-    <source src="https://assets.mixkit.co/music/preview/mixkit-wedding-waltz-237.mp3" type="audio/mp3" />
+    <source src="laanh.mp3" type="audio/mpeg" />
   </audio>
+
+  <!-- NÚT BẬT/TẮT NHẠC CỐ ĐỊNH -->
+  <div class="music-btn" id="musicToggle" title="Bật/Tắt Nhạc Nền">♫</div>
+
+  <!-- NÚT BẬT/TẮT NHẠC (FIXED POSITION GÓC DƯỚI PHẢI) -->
+  <div class="music-btn" id="musicToggle" title="Bật/Tắt Nhạc Nền">♫</div>
 
   <!-- TICKER LỜI CHÚC (GÓC DƯỚI TRÁI) -->
   <div class="floating-ticker-widget" id="floatingWidget">
@@ -1180,6 +1218,60 @@
         customAlert.classList.add('active');
       }
 
+      // --- LOGIC PHÁT NHẠC VÀ SỰ KIỆN CLICK (ANTI-CRASH & AUTOPLAY POLICY) ---
+      const audioPlayer = document.getElementById('audioPlayer');
+      const musicToggle = document.getElementById('musicToggle');
+
+      function playAudioSafe() {
+        if (!audioPlayer) return;
+        audioPlayer.play()
+          .then(() => {
+            if (musicToggle) musicToggle.classList.add('playing');
+          })
+          .catch((err) => {
+            console.warn("Trình duyệt chặn autoplay, chờ người dùng tương tác:", err);
+          });
+      }
+
+      function toggleAudio() {
+        if (!audioPlayer) return;
+        if (audioPlayer.paused) {
+          audioPlayer.play()
+            .then(() => {
+              if (musicToggle) musicToggle.classList.add('playing');
+            })
+            .catch((e) => console.error("Lỗi phát audio:", e));
+        } else {
+          audioPlayer.pause();
+          if (musicToggle) musicToggle.classList.remove('playing');
+        }
+      }
+
+      if (musicToggle) {
+        musicToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleAudio();
+        });
+      }
+
+      // Kích hoạt phát nhạc khi bấm nút 'Mở thiệp'
+      const btnOpen = document.getElementById('btnOpen');
+      const gateScreen = document.getElementById('gateScreen');
+      if (btnOpen) {
+        btnOpen.addEventListener('click', () => {
+          if (gateScreen) gateScreen.classList.add('opened');
+          playAudioSafe();
+        });
+      }
+
+      // Fallback: Click chạm đầu tiên trên trang sẽ phát nhạc nếu trình duyệt chặn autoplay
+      document.addEventListener('click', function initAudioOnFirstTouch() {
+        if (audioPlayer && audioPlayer.paused) {
+          playAudioSafe();
+        }
+        document.removeEventListener('click', initAudioOnFirstTouch);
+      }, { once: true });
+
       // --- LOGIC COUNTDOWN TIMER (11:30 NGÀY 12/12/2026) ---
       const weddingDate = new Date("2026-12-12T11:30:00+07:00").getTime();
       const elDays = document.getElementById('cdDays');
@@ -1225,6 +1317,7 @@
 
       function renderTicker(item) {
         const box = document.getElementById('tickerContentBox');
+        if (!box) return;
         box.textContent = '';
         const div = document.createElement('div');
         div.className = 'ticker-slide-item';
@@ -1245,7 +1338,6 @@
         }, 4000);
       }
 
-      // Xây dựng phần tử card lời chúc chuẩn giao diện mẫu
       function createWishScrollCard(author, msg, timeString) {
         const card = document.createElement('div');
         card.className = 'wish-scroll-card';
@@ -1259,7 +1351,7 @@
 
         const timeSpan = document.createElement('span');
         timeSpan.className = 'wish-time-stamp';
-        timeSpan.textContent = timeString || new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN');
+        timeSpan.textContent = timeString || (new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'));
 
         header.appendChild(nameSpan);
         header.appendChild(timeSpan);
@@ -1275,13 +1367,13 @@
 
       function renderAllWishes() {
         const container = document.getElementById('infiniteWishesBox');
+        if (!container) return;
         container.textContent = '';
         wishesQueue.forEach(item => {
           container.appendChild(createWishScrollCard(item.name, item.message, item.time));
         });
       }
 
-      // Fetch toàn bộ lời chúc từ Google Sheet
       async function fetchWishesFromSheet() {
         renderAllWishes();
         startTickerLoop();
@@ -1300,65 +1392,76 @@
         }
       }
 
-      // Submit Form
-      document.getElementById('rsvpForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const submitBtn = document.getElementById('btnSubmitRsvp');
-        const nameVal = document.getElementById('nameInput').value.trim().slice(0, 50);
-        const attendingVal = document.getElementById('attendingSelect').value === 'true';
-        const guestsVal = parseInt(document.getElementById('guestCountSelect').value, 10) || 1;
-        const msgVal = document.getElementById('msgInput').value.trim().slice(0, 200);
+      // Submit Form xác nhận tham dự
+      const rsvpForm = document.getElementById('rsvpForm');
+      if (rsvpForm) {
+        rsvpForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const submitBtn = document.getElementById('btnSubmitRsvp');
+          const nameVal = document.getElementById('nameInput').value.trim().slice(0, 50);
+          const attendingVal = document.getElementById('attendingSelect').value === 'true';
+          const guestsVal = parseInt(document.getElementById('guestCountSelect').value, 10) || 1;
+          const msgVal = document.getElementById('msgInput').value.trim().slice(0, 200);
 
-        if (!nameVal || !msgVal) return;
+          if (!nameVal || !msgVal) return;
 
-        const currentTimeStr = new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN');
-        const payload = {
-          name: nameVal,
-          attending: attendingVal,
-          guests: attendingVal ? guestsVal : 0,
-          message: msgVal,
-          time: currentTimeStr
-        };
+          const currentTimeStr = new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN');
+          const payload = {
+            name: nameVal,
+            attending: attendingVal,
+            guests: attendingVal ? guestsVal : 0,
+            message: msgVal,
+            time: currentTimeStr
+          };
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = "ĐANG GỬI DỮ LIỆU...";
+          submitBtn.disabled = true;
+          submitBtn.textContent = "ĐANG GỬI DỮ LIỆU...";
 
-        try {
-          if (SCRIPT_URL.includes("macros/s/")) {
-            await fetch(SCRIPT_URL, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
+          try {
+            if (SCRIPT_URL.includes("macros/s/")) {
+              await fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+            }
+
+            const newWish = { name: nameVal, message: msgVal, time: currentTimeStr };
+            wishesQueue.unshift(newWish);
+            const container = document.getElementById('infiniteWishesBox');
+            if (container) {
+              container.prepend(createWishScrollCard(nameVal, msgVal, currentTimeStr));
+            }
+            startTickerLoop();
+
+            showAlert("Cảm ơn bạn đã gửi lời chúc phúc và xác nhận tham dự!");
+            document.getElementById('msgInput').value = '';
+          } catch (err) {
+            showAlert("Gửi thành công! Lời chúc đã được lưu tạm.");
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>✈</span> GỬI LỜI CHÚC MỪNG';
           }
+        });
+      }
 
-          // Cập nhật DOM ngay lập tức
-          const newWish = { name: nameVal, message: msgVal, time: currentTimeStr };
-          wishesQueue.unshift(newWish);
-          const container = document.getElementById('infiniteWishesBox');
-          container.prepend(createWishScrollCard(nameVal, msgVal, currentTimeStr));
-          startTickerLoop();
-
-          showAlert("Cảm ơn bạn đã gửi lời chúc phúc và xác nhận tham dự!");
-          document.getElementById('msgInput').value = '';
-        } catch (err) {
-          showAlert("Gửi thành công! Lời chúc đã được lưu tạm.");
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = '<span>✈</span> GỬI LỜI CHÚC MỪNG';
-        }
-      });
-
-      // Tắt / Mở Ticker Widget
+      // Tắt / Mở Ticker Widget góc trái
       const floatingWidget = document.getElementById('floatingWidget');
-      document.getElementById('widgetToggleBtn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        floatingWidget.classList.add('minimized');
-      });
-      document.getElementById('widgetFabIcon').addEventListener('click', () => {
-        floatingWidget.classList.remove('minimized');
-      });
+      const widgetToggleBtn = document.getElementById('widgetToggleBtn');
+      const widgetFabIcon = document.getElementById('widgetFabIcon');
+
+      if (widgetToggleBtn && floatingWidget) {
+        widgetToggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          floatingWidget.classList.add('minimized');
+        });
+      }
+      if (widgetFabIcon && floatingWidget) {
+        widgetFabIcon.addEventListener('click', () => {
+          floatingWidget.classList.remove('minimized');
+        });
+      }
 
       // --- LOGIC 3D COVERFLOW & LIGHTBOX ---
       const cards = document.querySelectorAll('.coverflow-card');
@@ -1384,21 +1487,30 @@
         });
       }
 
-      document.getElementById('nextBtn').addEventListener('click', () => {
-        updateCoverflow(currentCardIndex + 1);
-        resetAutoPlay();
-      });
+      const nextBtn = document.getElementById('nextBtn');
+      const prevBtn = document.getElementById('prevBtn');
 
-      document.getElementById('prevBtn').addEventListener('click', () => {
-        updateCoverflow(currentCardIndex - 1);
-        resetAutoPlay();
-      });
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          updateCoverflow(currentCardIndex + 1);
+          resetAutoPlay();
+        });
+      }
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          updateCoverflow(currentCardIndex - 1);
+          resetAutoPlay();
+        });
+      }
 
       cards.forEach((card, idx) => {
         card.addEventListener('click', () => {
           if (idx === currentCardIndex) {
-            lightboxImg.src = card.querySelector('img').src;
-            lightboxOverlay.classList.add('active');
+            if (lightboxImg && lightboxOverlay) {
+              lightboxImg.src = card.querySelector('img').src;
+              lightboxOverlay.classList.add('active');
+            }
           } else {
             updateCoverflow(idx);
             resetAutoPlay();
@@ -1406,41 +1518,48 @@
         });
       });
 
-      document.getElementById('lightboxClose').addEventListener('click', () => lightboxOverlay.classList.remove('active'));
-      lightboxOverlay.addEventListener('click', (e) => { if (e.target === lightboxOverlay) lightboxOverlay.classList.remove('active'); });
+      const lightboxClose = document.getElementById('lightboxClose');
+      if (lightboxClose && lightboxOverlay) {
+        lightboxClose.addEventListener('click', () => lightboxOverlay.classList.remove('active'));
+        lightboxOverlay.addEventListener('click', (e) => { 
+          if (e.target === lightboxOverlay) lightboxOverlay.classList.remove('active'); 
+        });
+      }
 
-      function startAutoPlay() { autoPlayInterval = setInterval(() => updateCoverflow(currentCardIndex + 1), 3500); }
-      function resetAutoPlay() { clearInterval(autoPlayInterval); startAutoPlay(); }
+      function startAutoPlay() { 
+        autoPlayInterval = setInterval(() => updateCoverflow(currentCardIndex + 1), 3500); 
+      }
+      function resetAutoPlay() { 
+        clearInterval(autoPlayInterval); 
+        startAutoPlay(); 
+      }
 
-      // --- INIT & URL PARAMS ---
+      // --- URL PARAMS GUEST INJECTION ---
       const params = new URLSearchParams(window.location.search);
       const rawGuest = params.get('invite') || params.get('guest') || params.get('target') || '';
       if (rawGuest) {
-        document.getElementById('gateGuest').textContent = String(rawGuest).trim().slice(0, 60);
-        document.getElementById('nameInput').value = String(rawGuest).trim().slice(0, 50);
+        const gateGuest = document.getElementById('gateGuest');
+        const nameInput = document.getElementById('nameInput');
+        if (gateGuest) gateGuest.textContent = String(rawGuest).trim().slice(0, 60);
+        if (nameInput) nameInput.value = String(rawGuest).trim().slice(0, 50);
       }
-
-      const gateScreen = document.getElementById('gateScreen');
-      const audioPlayer = document.getElementById('audioPlayer');
-      const musicToggle = document.getElementById('musicToggle');
-
-      document.getElementById('btnOpen').addEventListener('click', () => {
-        gateScreen.classList.add('opened');
-        audioPlayer.play().then(() => musicToggle.classList.add('playing')).catch(() => {});
-      });
-
-      musicToggle.addEventListener('click', () => {
-        if (audioPlayer.paused) { audioPlayer.play(); musicToggle.classList.add('playing'); }
-        else { audioPlayer.pause(); musicToggle.classList.remove('playing'); }
-      });
 
       // Mở / Đóng QR Code Modal Hộp Quà Mừng
       const giftModal = document.getElementById('giftModal');
-      document.getElementById('openGiftModal').addEventListener('click', () => giftModal.classList.add('active'));
-      document.getElementById('closeModal').addEventListener('click', () => giftModal.classList.remove('active'));
-      giftModal.addEventListener('click', (e) => {
-        if (e.target === giftModal) giftModal.classList.remove('active');
-      });
+      const openGiftModal = document.getElementById('openGiftModal');
+      const closeModal = document.getElementById('closeModal');
+
+      if (openGiftModal && giftModal) {
+        openGiftModal.addEventListener('click', () => giftModal.classList.add('active'));
+      }
+      if (closeModal && giftModal) {
+        closeModal.addEventListener('click', () => giftModal.classList.remove('active'));
+      }
+      if (giftModal) {
+        giftModal.addEventListener('click', (e) => {
+          if (e.target === giftModal) giftModal.classList.remove('active');
+        });
+      }
 
       updateCoverflow(0);
       startAutoPlay();
