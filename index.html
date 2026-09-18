@@ -1218,61 +1218,63 @@
         customAlert.classList.add('active');
       }
 
-      // --- LOGIC PHÁT NHẠC VÀ SỰ KIỆN CLICK (ANTI-CRASH & AUTOPLAY POLICY) ---
+      // --- XỬ LÝ ÂM THANH TƯƠNG TÍCH DI ĐỘNG (MOBILE AUDIO UNLOCKER) ---
       const audioPlayer = document.getElementById('audioPlayer');
       const musicToggle = document.getElementById('musicToggle');
+      const btnOpen = document.getElementById('btnOpen');
+      const gateScreen = document.getElementById('gateScreen');
 
-      function playAudioSafe() {
+      let audioUnlocked = false;
+
+      function unlockAndPlayAudio() {
         if (!audioPlayer) return;
+        
+        // Trên mobile, gọi lệnh play ngay trong một sự kiện chạm (User Gesture)
         audioPlayer.play()
           .then(() => {
+            audioUnlocked = true;
             if (musicToggle) musicToggle.classList.add('playing');
+            console.log("Audio unlocked and playing successfully.");
           })
           .catch((err) => {
-            console.warn("Trình duyệt chặn autoplay, chờ người dùng tương tác:", err);
+            console.warn("Mobile autoplay policy blocked play():", err);
           });
       }
 
-      function toggleAudio() {
-        if (!audioPlayer) return;
-        if (audioPlayer.paused) {
-          audioPlayer.play()
-            .then(() => {
-              if (musicToggle) musicToggle.classList.add('playing');
-            })
-            .catch((e) => console.error("Lỗi phát audio:", e));
-        } else {
-          audioPlayer.pause();
-          if (musicToggle) musicToggle.classList.remove('playing');
-        }
-      }
-
-      if (musicToggle) {
-        musicToggle.addEventListener('click', (e) => {
-          e.stopPropagation();
-          toggleAudio();
-        });
-      }
-
-      // Kích hoạt phát nhạc khi bấm nút 'Mở thiệp'
-      const btnOpen = document.getElementById('btnOpen');
-      const gateScreen = document.getElementById('gateScreen');
+      // Sự kiện bấm nút "Mở thiệp" (Đây là hành động chạm chính thức đầu tiên trên mobile)
       if (btnOpen) {
         btnOpen.addEventListener('click', () => {
           if (gateScreen) gateScreen.classList.add('opened');
-          playAudioSafe();
+          unlockAndPlayAudio();
         });
       }
 
-      // Fallback: Click chạm đầu tiên trên trang sẽ phát nhạc nếu trình duyệt chặn autoplay
-      document.addEventListener('click', function initAudioOnFirstTouch() {
-        if (audioPlayer && audioPlayer.paused) {
-          playAudioSafe();
+      // Nút điều khiển thủ công góc dưới phải
+      if (musicToggle) {
+        musicToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!audioPlayer) return;
+          
+          if (audioPlayer.paused) {
+            audioPlayer.play()
+              .then(() => musicToggle.classList.add('playing'))
+              .catch(err => console.error("Không thể phát nhạc:", err));
+          } else {
+            audioPlayer.pause();
+            musicToggle.classList.remove('playing');
+          }
+        });
+      }
+
+      // Fallback chung cho mọi thiết bị di động: Chạm bất cứ đâu lần đầu tiên sẽ kích hoạt nhạc nếu chưa chạy
+      window.addEventListener('touchstart', function handleFirstTouch() {
+        if (!audioUnlocked && audioPlayer && audioPlayer.paused) {
+          unlockAndPlayAudio();
         }
-        document.removeEventListener('click', initAudioOnFirstTouch);
+        window.removeEventListener('touchstart', handleFirstTouch);
       }, { once: true });
 
-      // --- LOGIC COUNTDOWN TIMER (11:30 NGÀY 12/12/2026) ---
+      // --- LOGIC COUNTDOWN TIMER (12/12/2026) ---
       const weddingDate = new Date("2026-12-12T11:30:00+07:00").getTime();
       const elDays = document.getElementById('cdDays');
       const elHours = document.getElementById('cdHours');
@@ -1284,10 +1286,10 @@
         const distance = weddingDate - now;
 
         if (distance < 0) {
-          elDays.textContent = "00";
-          elHours.textContent = "00";
-          elMinutes.textContent = "00";
-          elSeconds.textContent = "00";
+          if (elDays) elDays.textContent = "00";
+          if (elHours) elHours.textContent = "00";
+          if (elMinutes) elMinutes.textContent = "00";
+          if (elSeconds) elSeconds.textContent = "00";
           return;
         }
 
@@ -1296,10 +1298,10 @@
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        elDays.textContent = days < 10 ? "0" + days : days;
-        elHours.textContent = hours < 10 ? "0" + hours : hours;
-        elMinutes.textContent = minutes < 10 ? "0" + minutes : minutes;
-        elSeconds.textContent = seconds < 10 ? "0" + seconds : seconds;
+        if (elDays) elDays.textContent = days < 10 ? "0" + days : days;
+        if (elHours) elHours.textContent = hours < 10 ? "0" + hours : hours;
+        if (elMinutes) elMinutes.textContent = minutes < 10 ? "0" + minutes : minutes;
+        if (elSeconds) elSeconds.textContent = seconds < 10 ? "0" + seconds : seconds;
       }
       setInterval(updateCountdown, 1000);
       updateCountdown();
