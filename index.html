@@ -66,6 +66,13 @@
     .music-btn.playing {
       animation: spinMusic 6s linear infinite !important;
     }
+    .music-btn.needs-tap {
+      animation: pulseNeedsTap 1.1s ease-in-out infinite !important;
+    }
+    @keyframes pulseNeedsTap {
+      0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+      50% { box-shadow: 0 4px 22px rgba(201,162,39,0.75); }
+    }
     @keyframes spinMusic {
       100% { transform: rotate(360deg); }
     }
@@ -1225,24 +1232,44 @@
       const musicToggle = document.getElementById('musicToggle');
       const btnOpen = document.getElementById('btnOpen');
       const gateScreen = document.getElementById('gateScreen');
+      let audioUnlocked = false;
+      let audioRetryHinted = false;
 
-      function playAudioSafe() {
-        if (!audioPlayer) return;
-        audioPlayer.play()
-          .then(() => {
+      // "Mồi" audio ngay khi trang tải xong: gọi load() để Safari/iOS chuẩn bị
+      // sẵn dữ liệu trước, giúp play() ở bước sau ít bị từ chối hơn.
+      if (audioPlayer) {
+        try { audioPlayer.load(); } catch (e) {}
+      }
+
+      function playAudioSafe(sourceLabel) {
+        if (!audioPlayer) return Promise.reject('no-audio-element');
+        audioPlayer.muted = false;
+        audioPlayer.volume = 1;
+        // play() PHẢI được gọi trực tiếp, đồng bộ, ngay trong hàm xử lý sự
+        // kiện chạm/click của người dùng — không qua bất kỳ await/delay nào
+        // phía trước — nếu không iOS Safari sẽ coi đây không còn là "cử chỉ
+        // người dùng hợp lệ" và chặn phát nhạc (NotAllowedError).
+        const p = audioPlayer.play();
+        if (p && typeof p.then === 'function') {
+          return p.then(() => {
+            audioUnlocked = true;
             if (musicToggle) musicToggle.classList.add('playing');
-          })
-          .catch((err) => {
-            console.warn("Trình duyệt chặn autoplay trên mobile:", err);
+          }).catch((err) => {
+            console.warn('[audio] Không thể tự phát (' + sourceLabel + '):', err && err.name, err);
+            // Cho phép thử lại ở lượt chạm/click kế tiếp — không coi là lỗi vĩnh viễn.
+            if (!audioRetryHinted && musicToggle) {
+              audioRetryHinted = true;
+              musicToggle.classList.add('needs-tap');
+            }
           });
+        }
+        return Promise.resolve();
       }
 
       function toggleAudio() {
         if (!audioPlayer) return;
         if (audioPlayer.paused) {
-          audioPlayer.play()
-            .then(() => { if (musicToggle) musicToggle.classList.add('playing'); })
-            .catch((e) => console.error("Lỗi phát audio:", e));
+          playAudioSafe('music-toggle-click');
         } else {
           audioPlayer.pause();
           if (musicToggle) musicToggle.classList.remove('playing');
@@ -1252,24 +1279,37 @@
       if (musicToggle) {
         musicToggle.addEventListener('click', (e) => {
           e.stopPropagation();
+          musicToggle.classList.remove('needs-tap');
           toggleAudio();
         });
       }
 
       if (btnOpen) {
-        btnOpen.addEventListener('click', () => {
+        // Chạm/bấm "Mở thiệp" là cử chỉ người dùng đầu tiên và rõ ràng nhất —
+        // gọi play() ngay dòng đầu tiên trong handler, trước khi làm bất cứ
+        // việc gì khác (kể cả đổi class ẩn/hiện màn hình).
+        const handleOpen = (e) => {
+          if (btnOpen.dataset.opened === '1') return; // tránh gọi đôi (click + touchend)
+          btnOpen.dataset.opened = '1';
+          playAudioSafe('btn-open');
           if (gateScreen) gateScreen.classList.add('opened');
-          playAudioSafe();
-        });
+        };
+        // Gắn cả 'click' và 'touchend': một số WebView trong app (Zalo, Messenger,
+        // Facebook...) trên iPhone xử lý sự kiện chạm khác với Safari gốc.
+        btnOpen.addEventListener('touchend', handleOpen, { passive: true });
+        btnOpen.addEventListener('click', handleOpen);
       }
 
-      // Fallback cho màn hình cảm ứng di động
-      window.addEventListener('touchstart', function handleFirstTouch() {
+      // Fallback: nếu play() ở bước "Mở thiệp" vẫn bị chặn (một số iPhone/WebView
+      // đặc biệt khắt khe), tự thử phát lại ở lần chạm/click kế tiếp bất kỳ trên
+      // trang — không cần người dùng phải tự tìm nút nhạc.
+      function retryOnNextGesture() {
         if (audioPlayer && audioPlayer.paused) {
-          playAudioSafe();
+          playAudioSafe('fallback-gesture');
         }
-        window.removeEventListener('touchstart', handleFirstTouch);
-      }, { once: true });
+      }
+      window.addEventListener('touchend', retryOnNextGesture, { passive: true });
+      window.addEventListener('click', retryOnNextGesture);
 
       // --- LOGIC COUNTDOWN TIMER (12/12/2026) ---
       const weddingDate = new Date("2026-12-12T11:30:00+07:00").getTime();
