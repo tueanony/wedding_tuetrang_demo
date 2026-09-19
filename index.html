@@ -941,14 +941,14 @@
       <div class="parents-grid">
         <div class="parent-column">
           <div class="role-title">Ông Bà</div>
-          <div class="parent-names">Nguyễn Tiến Dũng<br />Võ Thị Phi Giao</div>
-          <div class="parent-location">Quy Nhơn</div>
+          <div class="parent-names">Nguyễn Văn Minh<br />Lê Thị Thanh</div>
+          <div class="parent-location">Đà Lạt, Lâm Đồng</div>
         </div>
         <div class="parents-divider"></div>
         <div class="parent-column">
           <div class="role-title">Ông Bà</div>
-          <div class="parent-names">Nguyễn Tuấn Anh<br />Võ Thị Thu Cúc</div>
-          <div class="parent-location">Tỉnh Đồng Tháp</div>
+          <div class="parent-names">Trần Quốc Bảo<br />Phạm Thị Hương</div>
+          <div class="parent-location">Thành phố Huế, Thừa Thiên Huế</div>
         </div>
       </div>
 
@@ -1234,10 +1234,28 @@
       const gateScreen = document.getElementById('gateScreen');
       let audioUnlocked = false;
       let audioRetryHinted = false;
+      let audioErrorShown = false;
 
-      // "Mồi" audio ngay khi trang tải xong: gọi load() để Safari/iOS chuẩn bị
-      // sẵn dữ liệu trước, giúp play() ở bước sau ít bị từ chối hơn.
+      // Bắt lỗi TẢI file nhạc (khác với lỗi CHẶN AUTOPLAY): sai tên file,
+      // sai chữ hoa/thường, 404, hoặc định dạng không hỗ trợ sẽ hiện ở đây.
       if (audioPlayer) {
+        audioPlayer.addEventListener('error', function () {
+          var codeMap = {
+            1: 'MEDIA_ERR_ABORTED — bị hủy tải',
+            2: 'MEDIA_ERR_NETWORK — lỗi mạng / không tìm thấy file (404)',
+            3: 'MEDIA_ERR_DECODE — file nhạc bị lỗi, không giải mã được',
+            4: 'MEDIA_ERR_SRC_NOT_SUPPORTED — sai đường dẫn hoặc định dạng không hỗ trợ'
+          };
+          var code = audioPlayer.error ? audioPlayer.error.code : 0;
+          var text = 'LỖI TẢI NHẠC: ' + (codeMap[code] || ('mã lỗi ' + code)) +
+            '\nĐường dẫn hiện tại: ' + (audioPlayer.currentSrc || '(rỗng)');
+          console.error('[audio]', text);
+          if (!audioErrorShown && typeof showAlert === 'function') {
+            audioErrorShown = true;
+            showAlert(text);
+          }
+        });
+        // "Mồi" audio ngay khi trang tải xong để Safari/iOS chuẩn bị sẵn dữ liệu.
         try { audioPlayer.load(); } catch (e) {}
       }
 
@@ -1253,13 +1271,20 @@
         if (p && typeof p.then === 'function') {
           return p.then(() => {
             audioUnlocked = true;
+            if (musicToggle) musicToggle.classList.remove('needs-tap');
             if (musicToggle) musicToggle.classList.add('playing');
           }).catch((err) => {
             console.warn('[audio] Không thể tự phát (' + sourceLabel + '):', err && err.name, err);
-            // Cho phép thử lại ở lượt chạm/click kế tiếp — không coi là lỗi vĩnh viễn.
             if (!audioRetryHinted && musicToggle) {
               audioRetryHinted = true;
               musicToggle.classList.add('needs-tap');
+            }
+            // Hiện đúng tên lỗi thật lên màn hình lần đầu bấm "Mở thiệp" — để biết
+            // chính xác là bị CHẶN GESTURE (NotAllowedError) hay lỗi khác.
+            if (sourceLabel === 'btn-open' && !audioErrorShown && typeof showAlert === 'function') {
+              audioErrorShown = true;
+              showAlert('Không tự phát được nhạc: ' + (err && err.name ? err.name : err) +
+                '\nHãy bấm vào biểu tượng nhạc 🎵 ở góc màn hình để mở nhạc thủ công.');
             }
           });
         }
