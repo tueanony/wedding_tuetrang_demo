@@ -941,14 +941,14 @@
       <div class="parents-grid">
         <div class="parent-column">
           <div class="role-title">Ông Bà</div>
-          <div class="parent-names">Nguyễn Văn Minh<br />Lê Thị Thanh</div>
-          <div class="parent-location">Đà Lạt, Lâm Đồng</div>
+          <div class="parent-names">Nguyễn Hải Châu<br />Võ Thị Quỳnh Giao</div>
+          <div class="parent-location">Thành phố Hồ Chí Minh</div>
         </div>
         <div class="parents-divider"></div>
         <div class="parent-column">
           <div class="role-title">Ông Bà</div>
-          <div class="parent-names">Trần Quốc Bảo<br />Phạm Thị Hương</div>
-          <div class="parent-location">Thành phố Huế, Thừa Thiên Huế</div>
+          <div class="parent-names">Nguyễn Tuấn Anh<br />Võ Thị Thu Cúc</div>
+          <div class="parent-location">Tỉnh Đồng Tháp</div>
         </div>
       </div>
 
@@ -1081,20 +1081,11 @@
 
       <div class="event-box">
         <h3>LỄ THÀNH HÔN (TƯ GIA)</h3>
-        <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 6px; font-weight: 600;">Số 88 Đường Nam Kỳ Khởi Nghĩa, Quận 1, TP. Hồ Chí Minh</p>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 6px; font-weight: 600;">Chợ Mỹ Xương, Mỹ Thọ, Đồng Tháp, Việt Nam</p>
         <div class="map-frame-container">
-          <iframe src="https://www.google.com/maps?q=88+Nam+Kỳ+Khởi+Nghĩa,+Bến+Nghé,+Quận+1,+TP+Hồ+Chí+Minh&output=embed" loading="lazy"></iframe>
+          <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d981.0309482582917!2d105.71771766951959!3d10.411741599357237!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x310a63313f04448d%3A0xebf9f14470c0cf87!2zQ2jhu6MgTeG7uSBYxrDGoW5n!5e0!3m2!1sen!2sus!4v1789756861388!5m2!1sen!2sus" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-        <a href="https://www.google.com/maps/search/?api=1&query=88+Đường+Nam+Kỳ+Khởi+Nghĩa,+Quận+1" target="_blank" class="btn-sub-action">Mở Bản Đồ</a>
-      </div>
-
-      <div class="event-box">
-        <h3>TIỆC MỪNG HẠNH PHÚC</h3>
-        <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 6px; font-weight: 600;">Trung Tâm Hội Nghị GEM Center, Số 8 Nguyễn Bỉnh Khiêm, Quận 1</p>
-        <div class="map-frame-container">
-          <iframe src="https://www.google.com/maps?q=GEM+Center,+8+Nguyễn+Bỉnh+Khiêm,+Đa+Kao,+Quận+1,+TP+Hồ+Chí+Minh&output=embed" loading="lazy"></iframe>
-        </div>
-        <a href="https://www.google.com/maps/search/?api=1&query=GEM+Center,+Số+8+Nguyễn+Bỉnh+Khiêm,+Quận+1" target="_blank" class="btn-sub-action">Mở Bản Đồ</a>
+        <a href="https://maps.app.goo.gl/DeWTf856eBxqhm1cA" target="_blank" rel="noopener noreferrer" class="btn-sub-action">Mở Bản Đồ</a>
       </div>
 
       <!-- FORM XÁC NHẬN THAM DỰ & GỬI LỜI CHÚC -->
@@ -1309,19 +1300,34 @@
         });
       }
 
+      // "Mở khoá" âm thanh ngay từ cú chạm đầu tiên trên trang (kể cả trước khi
+      // bấm "Mở thiệp"): phát rồi tắt ngay lập tức trong im lặng. Đây là kỹ
+      // thuật chuẩn để "đánh dấu" với iOS Safari rằng phần tử audio này đã
+      // từng được phép phát bởi một cử chỉ thật, giúp các lần play() sau đó
+      // (kể cả gọi từ code) có tỉ lệ thành công cao hơn hẳn.
+      document.addEventListener('touchstart', function unlockAudioOnce() {
+        if (!audioPlayer) return;
+        var p = audioPlayer.play();
+        if (p && typeof p.then === 'function') {
+          p.then(function () {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+          }).catch(function () { /* im lặng bỏ qua, sẽ thử lại ở bước "Mở thiệp" */ });
+        }
+        document.removeEventListener('touchstart', unlockAudioOnce);
+      }, { passive: true });
+
       if (btnOpen) {
-        // Chạm/bấm "Mở thiệp" là cử chỉ người dùng đầu tiên và rõ ràng nhất —
-        // gọi play() ngay dòng đầu tiên trong handler, trước khi làm bất cứ
-        // việc gì khác (kể cả đổi class ẩn/hiện màn hình).
+        // CHỈ dùng 'click' — đây là sự kiện WebKit/iOS Safari công nhận ổn định
+        // nhất cho việc "mở khoá" phát audio. 'touchend' trên một số bản iOS
+        // Safari không được tính là cử chỉ hợp lệ để autoplay, dù về mặt hiển
+        // thị vẫn hoạt động bình thường — đây chính là nguyên nhân NotAllowedError.
         const handleOpen = (e) => {
-          if (btnOpen.dataset.opened === '1') return; // tránh gọi đôi (click + touchend)
+          if (btnOpen.dataset.opened === '1') return; // tránh gọi đôi nếu người dùng bấm nhanh 2 lần
           btnOpen.dataset.opened = '1';
           playAudioSafe('btn-open');
           if (gateScreen) gateScreen.classList.add('opened');
         };
-        // Gắn cả 'click' và 'touchend': một số WebView trong app (Zalo, Messenger,
-        // Facebook...) trên iPhone xử lý sự kiện chạm khác với Safari gốc.
-        btnOpen.addEventListener('touchend', handleOpen, { passive: true });
         btnOpen.addEventListener('click', handleOpen);
       }
 
