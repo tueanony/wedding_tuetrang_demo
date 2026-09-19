@@ -1279,7 +1279,8 @@
             }
             if (sourceLabel === 'btn-open' && !audioErrorShown && typeof showAlert === 'function') {
               audioErrorShown = true;
-              showAlert('Không tự phát được nhạc: ' + (err && err.name ? err.name : err) +
+              var errDetail = (err && err.name ? err.name : String(err)) + (err && err.message ? (' — ' + err.message) : '');
+              showAlert('Không tự phát được nhạc: ' + errDetail +
                 '\nHãy bấm vào biểu tượng nhạc 🎵 ở góc màn hình để mở nhạc thủ công.');
             }
           });
@@ -1311,6 +1312,7 @@
         const handleOpen = (e) => {
           if (btnOpen.dataset.opened === '1') return; // tránh gọi đôi nếu người dùng bấm nhanh 2 lần
           btnOpen.dataset.opened = '1';
+          e.stopPropagation(); // chặn sự kiện nổi bọt lên window, tránh bị gọi play() lần 2
           playAudioSafe('btn-open');
           if (gateScreen) gateScreen.classList.add('opened');
         };
