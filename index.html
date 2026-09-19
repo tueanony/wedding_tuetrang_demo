@@ -772,12 +772,16 @@
     .qr-modal-card {
       background: #FFFDF9; max-width: 600px; width: 100%; border-radius: 20px;
       overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.35); position: relative;
+      max-height: 88vh; max-height: 88svh; display: flex; flex-direction: column;
     }
     .qr-modal-header {
       background: #0D253A;
       padding: 22px 20px;
       text-align: center;
-      position: relative;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      flex-shrink: 0;
     }
     .qr-modal-title {
       font-family: var(--font-serif);
@@ -789,8 +793,10 @@
       margin: 0;
     }
     .qr-modal-close {
-      position: absolute; top: 18px; right: 20px; background: none; border: none;
-      color: #FFF; font-size: 1.6rem; cursor: pointer; line-height: 1;
+      position: absolute; top: 18px; right: 20px; width: 34px; height: 34px;
+      background: rgba(255,255,255,0.12); border: none; border-radius: 50%;
+      color: #FFF; font-size: 1.5rem; cursor: pointer; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
     }
     .qr-modal-body {
       padding: 30px 20px 35px;
@@ -798,6 +804,8 @@
       grid-template-columns: 1fr 1fr;
       gap: 20px;
       text-align: center;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .qr-person-card {
       display: flex;
@@ -1167,7 +1175,7 @@
   <div class="qr-modal-overlay" id="giftModal">
     <div class="qr-modal-card">
       <div class="qr-modal-header">
-        <button class="qr-modal-close" id="closeModal">&times;</button>
+        <button class="qr-modal-close" id="closeModal" aria-label="Đóng">&times;</button>
         <h3 class="qr-modal-title">HỘP QUÀ MỪNG</h3>
       </div>
       <div class="qr-modal-body">
@@ -1250,14 +1258,13 @@
         try { audioPlayer.load(); } catch (e) {}
       }
 
+      // CHỈ MỘT nơi duy nhất gọi audioPlayer.play(): bên trong cú bấm "Mở thiệp".
+      // Không gọi play()/pause() ở bất kỳ chỗ nào khác cùng lúc, để tránh đụng
+      // độ giữa 2 lệnh play() làm huỷ lẫn nhau (AbortError).
       function playAudioSafe(sourceLabel) {
         if (!audioPlayer) return Promise.reject('no-audio-element');
         audioPlayer.muted = false;
         audioPlayer.volume = 1;
-        // play() PHẢI được gọi trực tiếp, đồng bộ, ngay trong hàm xử lý sự
-        // kiện chạm/click của người dùng — không qua bất kỳ await/delay nào
-        // phía trước — nếu không iOS Safari sẽ coi đây không còn là "cử chỉ
-        // người dùng hợp lệ" và chặn phát nhạc (NotAllowedError).
         const p = audioPlayer.play();
         if (p && typeof p.then === 'function') {
           return p.then(() => {
@@ -1270,8 +1277,6 @@
               audioRetryHinted = true;
               musicToggle.classList.add('needs-tap');
             }
-            // Hiện đúng tên lỗi thật lên màn hình lần đầu bấm "Mở thiệp" — để biết
-            // chính xác là bị CHẶN GESTURE (NotAllowedError) hay lỗi khác.
             if (sourceLabel === 'btn-open' && !audioErrorShown && typeof showAlert === 'function') {
               audioErrorShown = true;
               showAlert('Không tự phát được nhạc: ' + (err && err.name ? err.name : err) +
@@ -1300,28 +1305,9 @@
         });
       }
 
-      // "Mở khoá" âm thanh ngay từ cú chạm đầu tiên trên trang (kể cả trước khi
-      // bấm "Mở thiệp"): phát rồi tắt ngay lập tức trong im lặng. Đây là kỹ
-      // thuật chuẩn để "đánh dấu" với iOS Safari rằng phần tử audio này đã
-      // từng được phép phát bởi một cử chỉ thật, giúp các lần play() sau đó
-      // (kể cả gọi từ code) có tỉ lệ thành công cao hơn hẳn.
-      document.addEventListener('touchstart', function unlockAudioOnce() {
-        if (!audioPlayer) return;
-        var p = audioPlayer.play();
-        if (p && typeof p.then === 'function') {
-          p.then(function () {
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
-          }).catch(function () { /* im lặng bỏ qua, sẽ thử lại ở bước "Mở thiệp" */ });
-        }
-        document.removeEventListener('touchstart', unlockAudioOnce);
-      }, { passive: true });
-
       if (btnOpen) {
-        // CHỈ dùng 'click' — đây là sự kiện WebKit/iOS Safari công nhận ổn định
-        // nhất cho việc "mở khoá" phát audio. 'touchend' trên một số bản iOS
-        // Safari không được tính là cử chỉ hợp lệ để autoplay, dù về mặt hiển
-        // thị vẫn hoạt động bình thường — đây chính là nguyên nhân NotAllowedError.
+        // CHỈ dùng 'click' — sự kiện WebKit/iOS Safari công nhận ổn định nhất
+        // để mở khoá audio. Chỉ gọi play() Ở ĐÂY, một lần duy nhất cho cả trang.
         const handleOpen = (e) => {
           if (btnOpen.dataset.opened === '1') return; // tránh gọi đôi nếu người dùng bấm nhanh 2 lần
           btnOpen.dataset.opened = '1';
@@ -1331,15 +1317,14 @@
         btnOpen.addEventListener('click', handleOpen);
       }
 
-      // Fallback: nếu play() ở bước "Mở thiệp" vẫn bị chặn (một số iPhone/WebView
-      // đặc biệt khắt khe), tự thử phát lại ở lần chạm/click kế tiếp bất kỳ trên
-      // trang — không cần người dùng phải tự tìm nút nhạc.
+      // Fallback: nếu play() ở bước "Mở thiệp" vẫn bị chặn thật sự (không phải do
+      // đụng độ nội bộ), chỉ thử lại ở lần CLICK kế tiếp (không dùng touchend,
+      // để tránh lặp lại lỗi đụng độ play() như trên).
       function retryOnNextGesture() {
         if (audioPlayer && audioPlayer.paused) {
           playAudioSafe('fallback-gesture');
         }
       }
-      window.addEventListener('touchend', retryOnNextGesture, { passive: true });
       window.addEventListener('click', retryOnNextGesture);
 
       // --- LOGIC COUNTDOWN TIMER (12/12/2026) ---
