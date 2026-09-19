@@ -132,6 +132,27 @@
       border-radius: 20px; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; font-weight: 700;
     }
 
+    /* --- MÀN HÌNH LOADING OVERLAY --- */
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
+      z-index: 200005; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all 0.3s ease;
+    }
+    .loading-overlay.active { opacity: 1; visibility: visible; }
+    .spinner {
+      width: 48px; height: 48px; border: 4px solid rgba(255, 253, 249, 0.2);
+      border-top: 4px solid var(--btn-brown); border-radius: 50%;
+      animation: spinSpinner 1s linear infinite; margin-bottom: 16px;
+    }
+    .loading-text {
+      color: #FFFDF9; font-family: var(--font-sans); font-size: 0.9rem;
+      font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
+    }
+    @keyframes spinSpinner {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     /* --- MÀN HÌNH CHÀO MỞ THIỆP --- */
     #gateScreen {
       position: fixed; inset: 0;
@@ -917,6 +938,12 @@
       <button class="btn-alert-ok" id="alertOkBtn">Đồng Ý</button>
     </div>
   </div>
+  
+  <!-- MÀN HÌNH LOADING KHI SUBMIT FORM -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Đang gửi lời chúc...</div>
+  </div>
 
   <!-- MÀN HÌNH CHÀO MỞ THIỆP -->
   <div id="gateScreen">
@@ -1145,7 +1172,7 @@
       <div style="text-align: left; margin-top: 30px;">
         <h4 style="font-family: var(--font-serif); font-size: 1.4rem; color: var(--text-brown); font-weight: 700;">Lời Chúc Đã Nhận</h4>
         <div class="infinite-wishes-scroll-box" id="infiniteWishesBox">
-          <!-- Dữ liệu lời chúc render ở đây -->
+          <!-- Dữ liệu lời chúc từ Google Sheet sẽ render ở đây -->
         </div>
       </div>
 
@@ -1232,7 +1259,6 @@
     const btnOpen = document.getElementById('btnOpen');
     const gateScreen = document.getElementById('gateScreen');
 
-    // Bắt lỗi nếu đường dẫn file nhạc (laanh.mp3) bị sai hoặc không tồn tại
     if (audioPlayer) {
       audioPlayer.addEventListener('error', function () {
         console.error('[audio] Lỗi tải file nhạc laanh.mp3. Vui lòng kiểm tra lại đường dẫn file!');
@@ -1260,18 +1286,15 @@
       });
     }
 
-    // Xử lý nút Mở thiệp: Gộp gọn hành động gỡ màn hình chờ và kích hoạt play() ngay lập tức
     if (btnOpen) {
       btnOpen.addEventListener('click', () => {
         if (btnOpen.dataset.opened === '1') return;
         btnOpen.dataset.opened = '1';
 
-        // 1. Trượt màn hình chào mở thiệp lên
         if (gateScreen) {
           gateScreen.classList.add('opened');
         }
 
-        // 2. Kích hoạt phát nhạc trực tiếp trong cùng một chuỗi sự kiện người dùng
         if (audioPlayer) {
           audioPlayer.muted = false;
           audioPlayer.volume = 1.0;
@@ -1281,7 +1304,6 @@
               musicToggle.classList.remove('needs-tap');
             }
           }).catch(error => {
-            // Trường hợp hy hữu bị trình duyệt chặn nghiêm ngặt, hiển thị nút cần chạm
             console.warn('[audio] Bị chặn tự động phát:', error);
             if (musicToggle) {
               musicToggle.classList.add('needs-tap');
@@ -1324,19 +1346,13 @@
     updateCountdown();
 
     // --- WIDGET LỜI CHÚC & RENDER SCROLL BOX VÔ HẠN ---
-    let wishesQueue = [
-      { name: "Gia đình cô Lan", message: "Chúc hai cháu trăm năm hạnh phúc, sớm sinh quý tử!", time: "10:58:41 30/7/2026" },
-      { name: "Bạn thân của cô dâu", message: "Chúc mừng hai bạn về chung một nhà. Mong hai bạn luôn yêu thương nhau như ngày đầu!", time: "10:58:41 29/7/2026" },
-      { name: "Anh Minh", message: "Nhìn thiệp mà thấy ấm áp ghê. Chúc đám cưới thật trọn vẹn nhé!", time: "10:58:41 28/7/2026" },
-      { name: "Chị Hương", message: "Chúc cô dâu chú rể trăm năm hảo hợp, gia đình luôn đầm ấm.", time: "10:58:41 27/7/2026" },
-      { name: "Tập thể lớp 12A", message: "Mừng hạnh phúc hai bạn! Chúc hai bạn luôn nắm tay nhau đi hết chặng đường dài.", time: "10:58:41 26/7/2026" }
-    ];
+    let wishesQueue = [];
     let currentWishIndex = 0;
     let tickerTimer = null;
 
     function renderTicker(item) {
       const box = document.getElementById('tickerContentBox');
-      if (!box) return;
+      if (!box || !item) return;
       box.textContent = '';
       const div = document.createElement('div');
       div.className = 'ticker-slide-item';
@@ -1393,29 +1409,49 @@
       });
     }
 
+    // TỰ ĐỘNG TẢI LỜI CHÚC TỪ GOOGLE SHEET KHI VÀO TRANG
     async function fetchWishesFromSheet() {
-      renderAllWishes();
-      startTickerLoop();
+      if (!SCRIPT_URL || !SCRIPT_URL.includes("macros/s/")) return;
 
-      if (!SCRIPT_URL.includes("macros/s/")) return;
       try {
-        const res = await fetch(SCRIPT_URL);
+        // Thêm timestamp và action=list để bypass cache trình duyệt hoàn toàn
+        const res = await fetch(SCRIPT_URL + "?action=list&t=" + Date.now());
         const result = await res.json();
-        if (result.status === "success" && result.data.length > 0) {
-          wishesQueue = result.data;
+
+        let incomingData = [];
+
+        if (Array.isArray(result)) {
+          incomingData = result;
+        } else if (result && result.data && Array.isArray(result.data)) {
+          incomingData = result.data;
+        }
+
+        if (incomingData.length > 0) {
+          wishesQueue = incomingData;
           renderAllWishes();
           startTickerLoop();
+          console.log("[Wishes] Tải thành công " + incomingData.length + " lời chúc từ Google Sheet.");
         }
       } catch (e) {
-        console.warn("Chưa đồng bộ Google Sheet Web App:", e);
+        console.warn("[Wishes] Chưa thể kết nối tới Google Apps Script:", e);
       }
     }
 
-    // Submit Form xác nhận tham dự
+    // --- SUBMIT FORM VỚI ANTI-SPAM (COOLDOWN LOCALSTORAGE) & LOADING OVERLAY ---
     const rsvpForm = document.getElementById('rsvpForm');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
     if (rsvpForm) {
       rsvpForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Anti-Spam: Kiểm tra Cooldown 60s
+        const lastSubmitTime = localStorage.getItem('lastRsvpSubmit');
+        if (lastSubmitTime && (Date.now() - parseInt(lastSubmitTime, 10)) < 60000) {
+          showAlert("Bạn thao tác quá nhanh. Vui lòng chờ 1 phút trước khi gửi tiếp lời chúc mới!");
+          return;
+        }
+
         const submitBtn = document.getElementById('btnSubmitRsvp');
         const nameVal = document.getElementById('nameInput').value.trim().slice(0, 50);
         const attendingVal = document.getElementById('attendingSelect').value === 'true';
@@ -1433,8 +1469,8 @@
           time: currentTimeStr
         };
 
+        if (loadingOverlay) loadingOverlay.classList.add('active');
         submitBtn.disabled = true;
-        submitBtn.textContent = "ĐANG GỬI DỮ LIỆU...";
 
         try {
           if (SCRIPT_URL.includes("macros/s/")) {
@@ -1446,8 +1482,11 @@
             });
           }
 
+          localStorage.setItem('lastRsvpSubmit', Date.now().toString());
+
           const newWish = { name: nameVal, message: msgVal, time: currentTimeStr };
           wishesQueue.unshift(newWish);
+          
           const container = document.getElementById('infiniteWishesBox');
           if (container) {
             container.prepend(createWishScrollCard(nameVal, msgVal, currentTimeStr));
@@ -1459,8 +1498,8 @@
         } catch (err) {
           showAlert("Gửi thành công! Lời chúc đã được lưu tạm.");
         } finally {
+          if (loadingOverlay) loadingOverlay.classList.remove('active');
           submitBtn.disabled = false;
-          submitBtn.innerHTML = '<span>✈</span> GỬI LỜI CHÚC MỪNG';
         }
       });
     }
@@ -1553,14 +1592,15 @@
       startAutoPlay(); 
     }
 
-    // --- URL PARAMS GUEST INJECTION ---
+    // --- URL PARAMS GUEST INJECTION (?invite=) ---
     const params = new URLSearchParams(window.location.search);
-    const rawGuest = params.get('invite') || params.get('guest') || params.get('target') || '';
+    const rawGuest = params.get('invite') || '';
     if (rawGuest) {
       const gateGuest = document.getElementById('gateGuest');
       const nameInput = document.getElementById('nameInput');
-      if (gateGuest) gateGuest.textContent = String(rawGuest).trim().slice(0, 60);
-      if (nameInput) nameInput.value = String(rawGuest).trim().slice(0, 50);
+      const cleanGuestName = String(rawGuest).trim().slice(0, 60);
+      if (gateGuest) gateGuest.textContent = cleanGuestName;
+      if (nameInput) nameInput.value = cleanGuestName;
     }
 
     // Mở / Đóng QR Code Modal Hộp Quà Mừng
@@ -1582,6 +1622,8 @@
 
     updateCoverflow(0);
     startAutoPlay();
+    
+    // TỰ ĐỘNG CHẠY KHI MỞ TRANG WEB: Kéo dữ liệu từ Sheet về hiển thị
     fetchWishesFromSheet();
   })();
 </script>
